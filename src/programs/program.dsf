@@ -1,0 +1,60 @@
+# Programa de Teste Principal para a Arquitetura C
+# Este programa testa a instrucao IMUL e algumas operacoes basicas.
+
+# As variaveis serao alocadas pelo Assembler a partir do final da memoria
+# (memorySize - 1, -2, etc.).
+
+.data # Nao eh uma diretiva real, apenas um marcador para o usuario
+
+minuendo: .word 5   # Variavel 'minuendo' com valor 5
+multiplicador: .word 3 # Variavel 'multiplicador' com valor 3
+resultado_final: .word 0 # Variavel para guardar o resultado final
+
+.text # Nao eh uma diretiva real, apenas um marcador para o usuario
+start_program:
+  # Carregar os valores para RPG e RPG1 para a instrucao IMUL
+  # A instrucao IMUL espera que RPG e RPG1 contenham os operandos
+  # No nosso microprograma IMUL, os operandos sao lidos de IMUL_OP1_TEMP_ADDR e IMUL_OP2_TEMP_ADDR.
+  # Entao, este programa principal PRECISA salvar os valores nestes enderecos.
+
+  # Exemplo: Multiplicar 5 por 3
+
+  # Salva o multiplicando (5) na area temporaria para o IMUL
+  ldi 5                   # RPG <- 5
+  store 27                # Mem[IMUL_OP1_TEMP_ADDR] <- 5 (27 eh o valor de IMUL_OP1_TEMP_ADDR)
+
+  # Salva o multiplicador (3) na area temporaria para o IMUL
+  ldi 3                   # RPG <- 3
+  store 28                # Mem[IMUL_OP2_TEMP_ADDR] <- 3 (28 eh o valor de IMUL_OP2_TEMP_ADDR)
+
+  # Chama a instrucao IMUL
+  # O Assembler codifica 'imul %regA %regB'
+  # O microprograma 'imul' vai ler de IMUL_OP1_TEMP_ADDR e IMUL_OP2_TEMP_ADDR
+  # e colocar o resultado em IMUL_RESULT_ADDRESS (26).
+  imul %reg0 %reg1        # Executa a multiplicacao (5 * 3 = 15)
+
+  # Apos a execucao do IMUL, o resultado esta em IMUL_RESULT_ADDRESS (26)
+  # Le o resultado de IMUL_RESULT_ADDRESS para RPG
+  read 26                 # RPG <- Mem[IMUL_RESULT_ADDRESS] (RPG agora contem 15)
+
+  # Opcional: Salva o resultado no lugar da variavel 'resultado_final'
+  # Nota: A variavel 'resultado_final' sera alocada em um endereco no final da memoria.
+  # Voce precisara obter o endereco REAL de 'resultado_final' apos a montagem.
+  # Para testar, vamos assumir que 'resultado_final' sera alocada em 'memorySize - 3' se tivermos 3 variaveis.
+  # Por exemplo, se memorySize = 128, e temos 3 variaveis, as vars estao em 127, 126, 125.
+  # 'resultado_final' seria 125.
+  store resultado_final   # Mem[resultado_final_addr] <- RPG (15)
+
+  # Teste de outra instrucao (ex: INC)
+  inc                     # RPG++ (RPG agora contem 16)
+
+  # Teste de JMP (Salto Incondicional)
+  jmp end_program         # Salta para o final do programa
+
+loop_example:             # Este label nao sera alcancado devido ao JMP
+  ldi 100                 # RPG <- 100
+  store 10                # Mem[10] <- 100
+  jmp start_program       # Loop infinito (nao sera alcancado)
+
+end_program:
+  halt                    # Termina a execucao do simulador

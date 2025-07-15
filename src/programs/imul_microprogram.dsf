@@ -1,0 +1,69 @@
+# Microprograma para multiplicacao (IMUL)
+# Entrada:
+#   Operando1 (Multiplicando) em IMUL_OP1_TEMP_ADDR
+#   Operando2 (Multiplicador) em IMUL_OP2_TEMP_ADDR
+# Saida:
+#   Resultado em IMUL_RESULT_ADDRESS
+# Salva/Restaura: Contexto da CPU eh salvo/restaurado pela Architecture.imul()
+#
+# Logica: resultado = 0; enquanto (multiplicador > 0) { resultado += multiplicando; multiplicador--; }
+
+# Endereços de memoria usados pelo microprograma (valores a serem substituidos por literais reais)
+# ATENCAO: Estes valores DEVERAO ser os mesmos definidos em Architecture.java
+# para IMUL_OP1_TEMP_ADDR, IMUL_OP2_TEMP_ADDR, IMUL_RESULT_ADDRESS
+# e o endereco da CONSTANTE_UM.
+# Eles sao definidos no main de Architecture.java para serem consistentes.
+# Por exemplo, se Architecture.getImulOp1TempAddr() retorna 27, use 27 aqui.
+
+# Para simplificar aqui, vou usar os nomes das constantes como placeholders,
+# voce precisara obter os valores reais do seu Architecture.java para colocar aqui.
+# Exemplo: Se Architecture.IMUL_OP1_TEMP_ADDR for 27, o codigo sera "read 27".
+
+# Usarei os valores temporarios do ultimo Architecture.java que te mandei.
+# (Estes sao os valores que a Architecture.java calcula em componentsInstances())
+# IMUL_MICROPROGRAM_START = 0
+# IMUL_REGS_SAVE_AREA_START = 20
+# IMUL_RESULT_ADDRESS = 26
+# IMUL_OP1_TEMP_ADDR = 27
+# IMUL_OP2_TEMP_ADDR = 28
+# CONSTANTE_UM_ADDR = memorySize - 2 (ex: 128 - 2 = 126)
+
+# Copie este conteudo para um arquivo chamado 'imul_microprogram.dsf'
+# na mesma pasta onde voce executa o comando 'java architecture.Architecture program'
+
+imul_start:
+  # Inicializa o resultado em IMUL_RESULT_ADDRESS com 0
+  ldi 0                     # RPG <- 0
+  store 26                  # Mem[IMUL_RESULT_ADDRESS] <- 0 (26 eh o valor de IMUL_RESULT_ADDRESS)
+
+  # Carrega o multiplicando em RPG1 (valor a ser somado repetidamente)
+  read 27                   # RPG <- Mem[IMUL_OP1_TEMP_ADDR] (27 eh o valor de IMUL_OP1_TEMP_ADDR)
+  move %reg0 %reg1          # RPG1 <- RPG (RPG1 agora contem o multiplicando)
+
+  # Carrega o multiplicador em RPG (contador do loop)
+  read 28                   # RPG <- Mem[IMUL_OP2_TEMP_ADDR] (28 eh o valor de IMUL_OP2_TEMP_ADDR)
+
+imul_loop:
+  # Verifica se o multiplicador (RPG) eh zero
+  jz imul_end               # Se RPG == 0, salta para imul_end
+
+  # Adiciona o multiplicando ao resultado
+  read 26                   # RPG <- Mem[IMUL_RESULT_ADDRESS] (carrega o resultado atual para RPG)
+  add 27                    # RPG <- RPG + Mem[IMUL_OP1_TEMP_ADDR] (soma com o multiplicando)
+  store 26                  # Mem[IMUL_RESULT_ADDRESS] <- RPG (salva o novo resultado)
+
+  # Decrementa o multiplicador (RPG)
+  # Como nao temos DEC, usamos SUB 1. O valor '1' esta em Mem[memorySize - 2]
+  # Opcodes.SUB (1), Opcodes.ADD (0)
+  # O endereco da constante 1 sera passado como literal.
+  # No Main.java, ele eh colocado em memorySize - 2, que para memorySize = 128 eh 126.
+  sub 126                   # RPG <- RPG - Mem[126] (RPG--)
+
+  # Salva o multiplicador (contador) de volta na sua posicao temporaria
+  store 28                  # Mem[IMUL_OP2_TEMP_ADDR] <- RPG (salva o multiplicador atualizado)
+
+  # Continua o loop se o multiplicador nao for zero
+  jmp imul_loop             # Salta incondicionalmente de volta para imul_loop
+
+imul_end:
+  halt                      # Sinaliza o fim do microprograma para a Architecture

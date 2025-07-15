@@ -1,113 +1,103 @@
 package components;
 
-public class Ula {
-	
-	private Bus intBus;
-	private Bus extBus1;
-	private Bus extBus2;
-	private Register reg1;
-	private Register reg2;
-	
-	
-	public Ula(Bus extBus1, Bus extBus2) {
-		super();
-		this.extBus1 = extBus1;
-		this.extBus2 = extBus2;
-		intBus = new Bus();
-		reg1 = new Register("UlaReg0", extBus1, intBus);
-		reg2 = new Register("UlaReg1", extBus1, intBus);
-	}
+public class ULA {
+    private int internalReg0; // Equivalente ao operando que vem de intbus1 (primeiro parâmetro da ULA)
+    private int internalReg1; // Equivalente ao operando/resultado que vem de intbus2 (segundo parâmetro/resultado da ULA)
 
-	/**
-	 * This method adds the reg1 and reg2 values, storing the result in reg2.
-	 */
-	public void add() {
-		int res=0;
-		intBus.put(0);
-		reg1.internalRead(); //puts its data into the internal bus
-		res = intBus.get(); //stored for operation
-		reg2.internalRead(); //puts the internal data into the internal bus
-		res += intBus.get(); //the operation was performed
-		intBus.put(res);
-		reg2.internalStore(); //saves the result into internal store
-	}
-	
-	/**
-	 * This method sub the reg2 value from reg1 value, storing the result in reg2
-	 * This processing uses a Ula's internal bus
-	 */
-	public void sub() {
-				
-		int res=0;
-		intBus.put(0);
-		reg1.internalRead(); //puts its data into the internal bus
-		res = intBus.get(); //stored for operation
-		reg2.internalRead(); //puts the internal data into the internal bus
-		res -= intBus.get(); //the operation was performed
-		intBus.put(res);
-		reg2.internalStore(); //saves the result into internal store
-		
-	}
-	
-	/**
-	 * This method increments by 1 the value stored into reg2
-	 */
-	public void inc() {
-		
-		reg2.internalRead();
-		int res = intBus.get();
-		res ++;
-		intBus.put(res);
-		reg2.internalStore();
-		
-	}
-	
-	/**
-	 * This method stores the value found in the external bus into the #reg
-	 * @param reg
-	 */
-	public void store(int reg) {
-		if (reg==0)
-			reg1.store();
-		else
-			reg2.store();
-	}
-	
-	/**
-	 * This method reads the value from #reg stores it into the external bus
-	 * @param reg
-	 */
-	public void read (int reg) {
-		if (reg==0)
-			reg1.read();
-		else
-			reg2.read();
-	}
-	
-	/**
-	 * This method stores the value found in the internal bus into the #reg
-	 * @param reg
-	 */
-	public void internalStore(int reg) {
-		extBus1.put(extBus2.get()); //moving the data from a bus to another
-		//inserting the data in the correct register
-		if (reg==0)
-			reg1.store();
-		else
-			reg2.store();
-	}
-	
-	/**
-	 * This method reads the value from #reg stores it into the internal bus
-	 * @param reg
-	 */
-	public void internalRead (int reg) {
-		if (reg==0)
-			reg1.read();
-		else
-			reg2.read();
-		extBus2.put(extBus1.get()); //moving the data from a bus to another
-	}
-	
-	
+    private Bus intbus1; // Barramento interno 1 (entrada para ULA)
+    private Bus intbus2; // Barramento interno 2 (entrada/saída da ULA)
+
+    public ULA(Bus intbus1, Bus intbus2) {
+        this.intbus1 = intbus1;
+        this.intbus2 = intbus2;
+        this.internalReg0 = 0; // Inicializa registradores internos
+        this.internalReg1 = 0; // Inicializa registradores internos
+    }
+
+    /**
+     * Armazena um valor de um barramento interno em um registrador interno da ULA.
+     * @param internalRegIndex O índice do registrador interno da ULA (0 ou 1).
+     * 0: Armazena o valor de intbus1 em internalReg0.
+     * 1: Armazena o valor de intbus2 em internalReg1.
+     */
+    public void store(int internalRegIndex) {
+        if (internalRegIndex == 0) {
+            this.internalReg0 = intbus1.get();
+        } else if (internalRegIndex == 1) {
+            this.internalReg1 = intbus2.get(); // Note: This internalReg1 is sourced from intbus2 for regular store
+        } else {
+            throw new IllegalArgumentException("ULA: Índice de registrador interno inválido: " + internalRegIndex);
+        }
+    }
+    
+    /**
+     * Armazena um valor de um barramento interno em um registrador interno da ULA.
+     * Usado para casos onde a entrada é do intbus2 (como no seu microcódigo `ula.internalStore(1);`).
+     * Note: A sua API original tem `store(0)` e `internalStore(1)`. Estou mantendo a distinção.
+     * @param internalRegIndex O índice do registrador interno da ULA (apenas 1 é esperado aqui, pelo seu uso).
+     */
+    public void internalStore(int internalRegIndex) {
+        if (internalRegIndex == 0) { // Pode ser usado se houver um caminho intbus1 -> internalReg0 via internalStore.
+            this.internalReg0 = intbus1.get();
+        } else if (internalRegIndex == 1) {
+            this.internalReg1 = intbus2.get(); // This internalReg1 is sourced from intbus2 for internalStore
+        } else {
+            throw new IllegalArgumentException("ULA: Índice de registrador interno inválido para internalStore: " + internalRegIndex);
+        }
+    }
+
+
+    /**
+     * Coloca o valor de um registrador interno da ULA em um barramento interno.
+     * @param internalRegIndex O índice do registrador interno da ULA (0 ou 1).
+     * 0: Coloca o valor de internalReg0 em intbus1.
+     * 1: Coloca o valor de internalReg1 em intbus2.
+     */
+    public void internalRead(int internalRegIndex) {
+        if (internalRegIndex == 0) {
+            intbus1.put(this.internalReg0);
+        } else if (internalRegIndex == 1) {
+            intbus2.put(this.internalReg1);
+        } else {
+            throw new IllegalArgumentException("ULA: Índice de registrador interno inválido: " + internalRegIndex);
+        }
+    }
+    
+    /**
+     * Realiza uma operação de adição: internalReg1 <- internalReg0 + internalReg1.
+     * O resultado é armazenado em internalReg1.
+     */
+    public void add() {
+        this.internalReg1 = this.internalReg0 + this.internalReg1;
+    }
+
+    /**
+     * Realiza uma operação de subtração: internalReg1 <- internalReg0 - internalReg1.
+     * O resultado é armazenado em internalReg1.
+     */
+    public void sub() {
+        this.internalReg1 = this.internalReg0 - this.internalReg1;
+    }
+
+    /**
+     * Realiza uma operação de incremento: internalReg1 <- internalReg1 + 1.
+     * O resultado é armazenado em internalReg1.
+     */
+    public void inc() {
+        this.internalReg1++;
+    }
+
+    /**
+     * Realiza uma comparação subtraindo operand2 de operand1 e armazena o resultado em internalReg1.
+     * Útil para instruções de comparação (JEQ, JGT, JLW).
+     * A ULA APENAS realiza a operação; a Architecture é responsável por ler o resultado e setar as Flags.
+     * @param operand1 O primeiro operando (minuendo).
+     * @param operand2 O segundo operando (subtraendo).
+     */
+    public void compare(int operand1, int operand2) {
+        this.internalReg0 = operand1; // Coloca o primeiro operando em internalReg0
+        this.internalReg1 = operand2; // Coloca o segundo operando em internalReg1 (pois ULA.sub() usa ambos)
+        // Agora, podemos chamar sub() para realizar a operação
+        this.internalReg1 = this.internalReg0 - this.internalReg1; // Resultado em internalReg1
+    }
 }
