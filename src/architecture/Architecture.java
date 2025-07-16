@@ -232,7 +232,7 @@ public class Architecture {
 	//all the microprograms must be impemented here
 	//the instructions table is
 	/*
-	 *
+	 *		ORIGINAL ARCHITECTURE C INSTRUCTIONS:
 			add addr (reg0 <- reg0 + addr)
 			sub addr (reg0 <- reg0 - addr)
 			jmp addr (pc <- addr)
@@ -243,6 +243,23 @@ public class Architecture {
 			ldi x    (reg0 <- x. x must be an integer)
 			inc    (reg0++)
 			move regA regB (regA <- regB)
+			call addr (push PC+2, pc <- addr)
+			ret     (pc <- pop())
+			
+		 *	PHASE 1 EXTENSIONS:
+			addRegReg regA regB (regB <- regA + regB)
+			subRegReg regA regB (regB <- regA - regB)  
+			jnz addr (se !bitZero pc <- addr)
+			incMem addr (memory[addr]++)
+			
+		 *	PHASE 2 EXTENSIONS:
+			addRegMem regA addr (regA <- regA + memory[addr])
+			subRegMem regA addr (regA <- regA - memory[addr])
+			
+		 *	PHASE 3 EXTENSIONS:
+			cmp regA regB (flags <- regA - regB, sem armazenar resultado)
+			je addr (se bitZero pc <- addr)
+			jne addr (se !bitZero pc <- addr)
 	 */
 	
 	/**
@@ -262,6 +279,15 @@ public class Architecture {
 		commandsList.add("moveRegReg"); //9
 		commandsList.add("call");  //10
 		commandsList.add("ret");   //11
+		commandsList.add("addRegReg");  //12 - add %<regA> %<regB>
+		commandsList.add("subRegReg");  //13 - sub %<regA> %<regB>
+		commandsList.add("jnz");        //14 - jnz <mem>
+		commandsList.add("incMem");     //15 - inc <mem>
+		commandsList.add("addRegMem");  //16 - add %<regA> <mem>
+		commandsList.add("subRegMem");  //17 - sub %<regA> <mem>
+		commandsList.add("cmp");        //18 - cmp %<regA> %<regB>
+		commandsList.add("je");         //19 - je <mem>
+		commandsList.add("jne");        //20 - jne <mem>
 	}
 
 	
@@ -838,6 +864,474 @@ public class Architecture {
 		PC.store(); // Store the return address in PC
 	}
 	
+	/**
+	 * This method implements the microprogram for
+	 * 					ADD %<regA> %<regB>
+	 * In the machine language this command number is 12
+	 *    
+	 * The method performs RegB <- RegA + RegB
+	 * It reads two register IDs from memory and performs addition between them
+	 * 
+	 * The logic is:
+	 * 1. Get first register ID (regA) from memory
+	 * 2. Get second register ID (regB) from memory  
+	 * 3. Read value from regA into ULA
+	 * 4. Read value from regB into ULA
+	 * 5. Perform addition
+	 * 6. Store result back in regB
+	 * 7. Update PC to next instruction
+	 */
+	public void addRegReg() {
+		// Step 1: Get first register ID (regA)
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to first parameter (regA ID)
+		PC.read();
+		memory.read(); // regA ID is now in external bus
+		int regAId = extbus1.get(); // Save regA ID
+		
+		// Step 2: Get second register ID (regB)
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to second parameter (regB ID)
+		PC.read();
+		memory.read(); // regB ID is now in external bus
+		int regBId = extbus1.get(); // Save regB ID
+		
+		// Step 3: Read value from regA
+		demux.setValue(regAId);
+		registersInternalRead(); // regA value -> intbus2
+		ula.internalStore(0); // Store regA value in ULA position 0
+		
+		// Step 4: Read value from regB
+		demux.setValue(regBId);
+		registersInternalRead(); // regB value -> intbus2
+		ula.internalStore(1); // Store regB value in ULA position 1
+		
+		// Step 5: Perform addition
+		ula.add(); // Result in ULA position 1
+		ula.internalRead(1); // Result -> intbus2
+		setStatusFlags(intbus2.get()); // Update flags
+		
+		// Step 6: Store result back in regB
+		demux.setValue(regBId);
+		registersInternalStore(); // intbus2 -> regB
+		
+		// Step 7: Update PC to next instruction
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();
+	}
+	
+	/**
+	 * This method implements the microprogram for
+	 * 					SUB %<regA> %<regB>
+	 * In the machine language this command number is 13
+	 *    
+	 * The method performs RegB <- RegA - RegB
+	 * It reads two register IDs from memory and performs subtraction between them
+	 * 
+	 * The logic is similar to addRegReg but uses subtraction
+	 */
+	public void subRegReg() {
+		// Step 1: Get first register ID (regA)
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to first parameter (regA ID)
+		PC.read();
+		memory.read(); // regA ID is now in external bus
+		int regAId = extbus1.get(); // Save regA ID
+		
+		// Step 2: Get second register ID (regB)
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to second parameter (regB ID)
+		PC.read();
+		memory.read(); // regB ID is now in external bus
+		int regBId = extbus1.get(); // Save regB ID
+		
+		// Step 3: Read value from regA
+		demux.setValue(regAId);
+		registersInternalRead(); // regA value -> intbus2
+		ula.internalStore(0); // Store regA value in ULA position 0
+		
+		// Step 4: Read value from regB
+		demux.setValue(regBId);
+		registersInternalRead(); // regB value -> intbus2
+		ula.internalStore(1); // Store regB value in ULA position 1
+		
+		// Step 5: Perform subtraction (regA - regB)
+		ula.sub(); // Result in ULA position 1
+		ula.internalRead(1); // Result -> intbus2
+		setStatusFlags(intbus2.get()); // Update flags
+		
+		// Step 6: Store result back in regB
+		demux.setValue(regBId);
+		registersInternalStore(); // intbus2 -> regB
+		
+		// Step 7: Update PC to next instruction
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();
+	}
+	
+	/**
+	 * This method implements the microprogram for
+	 * 					JNZ address
+	 * In the machine language this command number is 14, and the address is in the position next to him
+	 *    
+	 * where address is a valid position in this memory architecture (where 
+	 * the PC is redirected to, but only in the case the ZERO bit in Flags is 0)
+	 * The method reads the value from memory (position address) and 
+	 * inserts it into the PC register if the ZERO bit in Flags register is NOT set.
+	 * So, the program is deviated conditionally (opposite of JZ)
+	 * 
+	 * The logic is similar to JZ but checks for NOT ZERO
+	 */
+	public void jnz() {
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();//now PC points to the parameter address
+		PC.read();
+		memory.read();// now the parameter value (address of the jnz) is in the external bus
+		statusMemory.storeIn1(); //the address is in position 1 of the status memory
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();//now PC points to the next instruction
+		PC.read();//now the bus has the next instruction address
+		statusMemory.storeIn0(); //the address is in the position 0 of the status memory
+		// Key difference: we check for NOT ZERO (invert the zero flag)
+		extbus1.put(Flags.getBit(0) == 0 ? 1 : 0); //invert the ZERO bit logic
+		statusMemory.read(); //gets the correct address (next instruction or parameter address)
+		PC.store(); //stores into PC
+	}
+	
+	/**
+	 * This method implements the microprogram for
+	 * 					INC <mem>
+	 * In the machine language this command number is 15, and the address is in the position next to him
+	 *    
+	 * where address is a valid position in this memory architecture 
+	 * The method reads the value from memory (position address), increments it,
+	 * and stores it back in the same memory position
+	 * 
+	 * The logic is:
+	 * 1. Get memory address from parameter
+	 * 2. Read value from that memory address
+	 * 3. Increment the value
+	 * 4. Store the result back to the same memory address
+	 * 5. Update PC to next instruction
+	 */
+	public void incMem() {
+		// Step 1: Get memory address parameter from PC+1
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to parameter (memory address)
+		PC.read();
+		memory.read(); // memory address is now in external bus
+		int memAddress = extbus1.get(); // Save memory address
+		
+		// Step 2: Read value from memory address
+		extbus1.put(memAddress);
+		memory.read(); // value at memAddress -> extbus1
+		int originalValue = extbus1.get(); // Save original value
+		
+		// Step 3: Increment the value using ULA
+		extbus1.put(originalValue);
+		REG0.store(); // temporarily store original value in REG0
+		REG0.internalRead(); // REG0 -> intbus2
+		ula.internalStore(1); // value -> ULA
+		ula.inc(); // increment the value
+		ula.internalRead(1); // result -> intbus2
+		setStatusFlags(intbus2.get()); // update flags
+		REG0.internalStore(); // result -> REG0
+		
+		// Step 4: Store result back to memory (two-step store)
+		extbus1.put(memAddress);
+		memory.store(); // first store: set target address in memory
+		REG0.read(); // get incremented value from REG0 -> extbus1
+		memory.store(); // second store: store incremented value at the address
+		
+		// Step 5: Update PC to next instruction
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();
+	}
+	
+	/**
+	 * This method implements the microprogram for
+	 * 					ADD %<regA> <mem>
+	 * In the machine language this command number is 16
+	 *    
+	 * The method performs RegA <- RegA + memory[addr]
+	 * It reads a register ID and a memory address, then adds the memory value to the register
+	 * 
+	 * The logic is:
+	 * 1. Get register ID (regA) from memory
+	 * 2. Get memory address from memory
+	 * 3. Read value from regA into ULA
+	 * 4. Read value from memory address into ULA
+	 * 5. Perform addition
+	 * 6. Store result back in regA
+	 * 7. Update PC to next instruction
+	 */
+	public void addRegMem() {
+		// Step 1: Get register ID (regA)
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to first parameter (regA ID)
+		PC.read();
+		memory.read(); // regA ID is now in external bus
+		int regAId = extbus1.get(); // Save regA ID
+		
+		// Step 2: Get memory address
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to second parameter (memory address)
+		PC.read();
+		memory.read(); // memory address is now in external bus
+		int memAddress = extbus1.get(); // Save memory address
+		
+		// Step 3: Read value from regA
+		demux.setValue(regAId);
+		registersInternalRead(); // regA value -> intbus2
+		ula.internalStore(0); // Store regA value in ULA position 0
+		
+		// Step 4: Read value from memory address
+		extbus1.put(memAddress);
+		memory.read(); // value at memAddress -> extbus1
+		REG0.store(); // temporarily store memory value in REG0
+		REG0.internalRead(); // REG0 -> intbus2
+		ula.internalStore(1); // Store memory value in ULA position 1
+		
+		// Step 5: Perform addition
+		ula.add(); // Result in ULA position 1
+		ula.internalRead(1); // Result -> intbus2
+		setStatusFlags(intbus2.get()); // Update flags
+		
+		// Step 6: Store result back in regA
+		demux.setValue(regAId);
+		registersInternalStore(); // intbus2 -> regA
+		
+		// Step 7: Update PC to next instruction
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();
+	}
+	
+	/**
+	 * This method implements the microprogram for
+	 * 					SUB %<regA> <mem>
+	 * In the machine language this command number is 17
+	 *    
+	 * The method performs RegA <- RegA - memory[addr]
+	 * It reads a register ID and a memory address, then subtracts the memory value from the register
+	 * 
+	 * The logic is similar to addRegMem but uses subtraction
+	 */
+	public void subRegMem() {
+		// Step 1: Get register ID (regA)
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to first parameter (regA ID)
+		PC.read();
+		memory.read(); // regA ID is now in external bus
+		int regAId = extbus1.get(); // Save regA ID
+		
+		// Step 2: Get memory address
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to second parameter (memory address)
+		PC.read();
+		memory.read(); // memory address is now in external bus
+		int memAddress = extbus1.get(); // Save memory address
+		
+		// Step 3: Read value from regA
+		demux.setValue(regAId);
+		registersInternalRead(); // regA value -> intbus2
+		ula.internalStore(0); // Store regA value in ULA position 0
+		
+		// Step 4: Read value from memory address
+		extbus1.put(memAddress);
+		memory.read(); // value at memAddress -> extbus1
+		REG0.store(); // temporarily store memory value in REG0
+		REG0.internalRead(); // REG0 -> intbus2
+		ula.internalStore(1); // Store memory value in ULA position 1
+		
+		// Step 5: Perform subtraction (regA - memory)
+		ula.sub(); // Result in ULA position 1
+		ula.internalRead(1); // Result -> intbus2
+		setStatusFlags(intbus2.get()); // Update flags
+		
+		// Step 6: Store result back in regA
+		demux.setValue(regAId);
+		registersInternalStore(); // intbus2 -> regA
+		
+		// Step 7: Update PC to next instruction
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();
+	}
+	
+	/**
+	 * This method implements the microprogram for
+	 * 					CMP %<regA> %<regB>
+	 * In the machine language this command number is 18
+	 *    
+	 * The method performs comparison between two registers by computing regA - regB
+	 * but only updates the flags without storing the result anywhere
+	 * This is used for conditional jumps based on equality/inequality
+	 * 
+	 * The logic is:
+	 * 1. Get first register ID (regA) from memory
+	 * 2. Get second register ID (regB) from memory
+	 * 3. Read value from regA into ULA
+	 * 4. Read value from regB into ULA
+	 * 5. Perform subtraction (regA - regB)
+	 * 6. Update flags based on result (but don't store result)
+	 * 7. Update PC to next instruction
+	 */
+	public void cmp() {
+		// Step 1: Get first register ID (regA)
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to first parameter (regA ID)
+		PC.read();
+		memory.read(); // regA ID is now in external bus
+		int regAId = extbus1.get(); // Save regA ID
+		
+		// Step 2: Get second register ID (regB)
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore(); // PC points to second parameter (regB ID)
+		PC.read();
+		memory.read(); // regB ID is now in external bus
+		int regBId = extbus1.get(); // Save regB ID
+		
+		// Step 3: Read value from regA
+		demux.setValue(regAId);
+		registersInternalRead(); // regA value -> intbus2
+		ula.internalStore(0); // Store regA value in ULA position 0
+		
+		// Step 4: Read value from regB
+		demux.setValue(regBId);
+		registersInternalRead(); // regB value -> intbus2
+		ula.internalStore(1); // Store regB value in ULA position 1
+		
+		// Step 5: Perform subtraction (regA - regB) for comparison
+		ula.sub(); // Result in ULA position 1
+		ula.internalRead(1); // Result -> intbus2
+		
+		// Step 6: Update flags based on comparison (key difference: no storage)
+		setStatusFlags(intbus2.get()); // Update flags only
+		
+		// Step 7: Update PC to next instruction
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();
+	}
+	
+	/**
+	 * This method implements the microprogram for
+	 * 					JE address
+	 * In the machine language this command number is 19, and the address is in the position next to him
+	 *    
+	 * where address is a valid position in this memory architecture (where 
+	 * the PC is redirected to, but only in the case the ZERO bit in Flags is 1)
+	 * The method reads the value from memory (position address) and 
+	 * inserts it into the PC register if the ZERO bit in Flags register is set.
+	 * So, the program is deviated conditionally (same as JZ but semantically for equality)
+	 * 
+	 * The logic is identical to JZ (jump if zero flag is set)
+	 */
+	public void je() {
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();//now PC points to the parameter address
+		PC.read();
+		memory.read();// now the parameter value (address of the je) is in the external bus
+		statusMemory.storeIn1(); //the address is in position 1 of the status memory
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();//now PC points to the next instruction
+		PC.read();//now the bus has the next instruction address
+		statusMemory.storeIn0(); //the address is in the position 0 of the status memory
+		extbus1.put(Flags.getBit(0)); //the ZERO bit is in the external bus 
+		statusMemory.read(); //gets the correct address (next instruction or parameter address)
+		PC.store(); //stores into PC
+	}
+	
+	/**
+	 * This method implements the microprogram for
+	 * 					JNE address
+	 * In the machine language this command number is 20, and the address is in the position next to him
+	 *    
+	 * where address is a valid position in this memory architecture (where 
+	 * the PC is redirected to, but only in the case the ZERO bit in Flags is 0)
+	 * The method reads the value from memory (position address) and 
+	 * inserts it into the PC register if the ZERO bit in Flags register is NOT set.
+	 * So, the program is deviated conditionally (same as JNZ but semantically for inequality)
+	 * 
+	 * The logic is identical to JNZ (jump if zero flag is NOT set)
+	 */
+	public void jne() {
+		PC.internalRead();
+		ula.store(1);
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();//now PC points to the parameter address
+		PC.read();
+		memory.read();// now the parameter value (address of the jne) is in the external bus
+		statusMemory.storeIn1(); //the address is in position 1 of the status memory
+		ula.inc();
+		ula.read(1);
+		PC.internalStore();//now PC points to the next instruction
+		PC.read();//now the bus has the next instruction address
+		statusMemory.storeIn0(); //the address is in the position 0 of the status memory
+		// Key: we check for NOT ZERO (invert the zero flag logic)
+		extbus1.put(Flags.getBit(0) == 0 ? 1 : 0); //invert the ZERO bit logic
+		statusMemory.read(); //gets the correct address (next instruction or parameter address)
+		PC.store(); //stores into PC
+	}
+	
 	
 	public ArrayList<Register> getRegistersList() {
 		return registersList;
@@ -958,6 +1452,33 @@ public class Architecture {
 			break;
 		case 11:
 			ret();
+			break;
+		case 12:
+			addRegReg();
+			break;
+		case 13:
+			subRegReg();
+			break;
+		case 14:
+			jnz();
+			break;
+		case 15:
+			incMem();
+			break;
+		case 16:
+			addRegMem();
+			break;
+		case 17:
+			subRegMem();
+			break;
+		case 18:
+			cmp();
+			break;
+		case 19:
+			je();
+			break;
+		case 20:
+			jne();
 			break;
 		default:
 			halt = true;
