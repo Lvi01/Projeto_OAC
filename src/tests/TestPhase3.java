@@ -10,7 +10,7 @@ public class TestPhase3 {
     
     public static void main(String[] args) {
         try {
-            System.out.println("=== TESTE FASE 3 - Sistema de Comparação ===");
+            System.out.println("=== TESTE FASE 3 - Sistema de Comparacao ===");
             
             // Test 1: CMP with equal values
             System.out.println("\n--- Teste 1: CMP com valores iguais ---");

@@ -13,13 +13,13 @@ import architecture.Architecture;
 public class TestFinalSummary {
     
     public static void main(String[] args) {
-        System.out.println("=== RESUMO FINAL - ARQUITETURA COMPLETA COM 21 INSTRUÇÕES ===");
+        System.out.println("=== RESUMO FINAL - ARQUITETURA COMPLETA COM 21 INSTRUCOES ===");
         
-        System.out.println("\nArquitetura C Original: 12 instruções (0-11)");
-        System.out.println("FASE 1: 4 novas instruções (12-15)");
-        System.out.println("FASE 2: 2 novas instruções (16-17)");
-        System.out.println("FASE 3: 3 novas instruções (18-20)");
-        System.out.println("TOTAL: 21 instruções implementadas");
+        System.out.println("\nArquitetura C Original: 12 instrucoes (0-11)");
+        System.out.println("FASE 1: 4 novas instrucoes (12-15)");
+        System.out.println("FASE 2: 2 novas instrucoes (16-17)");
+        System.out.println("FASE 3: 3 novas instrucoes (18-20)");
+        System.out.println("TOTAL: 21 instrucoes implementadas");
         
         // Test key functionality from each phase
         testPhase1Functionality();
@@ -27,11 +27,11 @@ public class TestFinalSummary {
         testPhase3Functionality();
         
         System.out.println("\n=== SUCESSO: TODAS AS 3 FASES IMPLEMENTADAS E FUNCIONANDO! ===");
-        System.out.println("Arquitetura estendida de 12 para 21 instruções completa!");
+        System.out.println("Arquitetura estendida de 12 para 21 instrucoes completa!");
     }
     
     public static void testPhase1Functionality() {
-        System.out.println("\n--- TESTE FASE 1 (Instruções 12-15) ---");
+        System.out.println("\n--- TESTE FASE 1 (Instrucoes 12-15) ---");
         Architecture arch = new Architecture();
         
         // Test addRegReg (12)
@@ -66,7 +66,7 @@ public class TestFinalSummary {
     }
     
     public static void testPhase2Functionality() {
-        System.out.println("\n--- TESTE FASE 2 (Instruções 16-17) ---");
+        System.out.println("\n--- TESTE FASE 2 (Instrucoes 16-17) ---");
         Architecture arch = new Architecture();
         
         // Test addRegMem (16)
@@ -102,7 +102,7 @@ public class TestFinalSummary {
     }
     
     public static void testPhase3Functionality() {
-        System.out.println("\n--- TESTE FASE 3 (Instruções 18-20) ---");
+        System.out.println("\n--- TESTE FASE 3 (Instrucoes 18-20) ---");
         Architecture arch = new Architecture();
         
         // Test cmp (18) with equal values

@@ -183,6 +183,51 @@ public class Assembler {
 			parameter = tokens[1];
 			parameter2 = tokens[2];
 		}
+		if (commandNumber == 10) { //must to proccess a call command
+			parameter = tokens[1];
+			parameter = "&"+parameter;//this is a flag to indicate that is a position in memory
+		}
+		if (commandNumber == 11) { //must to proccess a ret command
+			// ret has no parameters
+		}
+		if (commandNumber == 12) { //must to proccess an addRegReg command
+			parameter = tokens[1];
+			parameter2 = tokens[2];
+		}
+		if (commandNumber == 13) { //must to proccess a subRegReg command
+			parameter = tokens[1];
+			parameter2 = tokens[2];
+		}
+		if (commandNumber == 14) { //must to proccess a jnz command
+			parameter = tokens[1];
+			parameter = "&"+parameter;//this is a flag to indicate that is a position in memory
+		}
+		if (commandNumber == 15) { //must to proccess an incMem command
+			parameter = tokens[1];
+			parameter = "&"+parameter;//this is a flag to indicate that is a position in memory
+		}
+		if (commandNumber == 16) { //must to proccess an addRegMem command
+			parameter = tokens[1];
+			parameter2 = tokens[2];
+			parameter2 = "&"+parameter2;//this is a flag to indicate that is a position in memory
+		}
+		if (commandNumber == 17) { //must to proccess a subRegMem command
+			parameter = tokens[1];
+			parameter2 = tokens[2];
+			parameter2 = "&"+parameter2;//this is a flag to indicate that is a position in memory
+		}
+		if (commandNumber == 18) { //must to proccess a cmp command
+			parameter = tokens[1];
+			parameter2 = tokens[2];
+		}
+		if (commandNumber == 19) { //must to proccess a je command
+			parameter = tokens[1];
+			parameter = "&"+parameter;//this is a flag to indicate that is a position in memory
+		}
+		if (commandNumber == 20) { //must to proccess a jne command
+			parameter = tokens[1];
+			parameter = "&"+parameter;//this is a flag to indicate that is a position in memory
+		}
 		objProgram.add(Integer.toString(commandNumber));
 		if (!parameter.isEmpty()) {
 			objProgram.add(parameter);

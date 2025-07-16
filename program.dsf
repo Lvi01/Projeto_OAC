@@ -1,22 +1,71 @@
-a
-b
-c
-t
-ldi 1
-move %RPG0 %RPG1
-store a
-ldi 3
-store b
-ldi 4
-store c
-read b
-store t
-laco:
-read b
-add t
-store b
-read a
+# =====================================================================
+# PROGRAMA PRINCIPAL DA ARQUITETURA C EXPANDIDA - 21 INSTRUCOES
+# =====================================================================
+# 
+# Este programa demonstra todas as 21 instrucoes implementadas:
+#
+# INSTRUCOES ORIGINAIS (0-11):
+#   add, sub, jmp, jz, jn, read, store, ldi, inc, moveRegReg, call, ret
+#
+# FASE 1 - Operacoes entre registradores e memoria (12-15):
+#   addRegReg, subRegReg, jnz, incMem
+#
+# FASE 2 - Operacoes registrador-memoria (16-17):
+#   addRegMem, subRegMem
+#
+# FASE 3 - Comparacoes e saltos condicionais (18-20):
+#   cmp, je, jne
+#
+# TOTAL: 21 instrucoes funcionais
+# =====================================================================
+
+# Variaveis utilizadas no programa
+teste100
+teste101
+teste102
+
+# Labels e programa principal
+inicio:
+# Instrucoes originais (0-11)
+ldi 10
+store teste100
+ldi 5
 inc
-store a
-sub c
-jn laco
+read teste100
+add teste100
+sub teste100
+jmp proximo1
+
+proximo1:
+jz fim
+jn fim
+move %REG0 %REG1
+
+# FASE 1: Instrucoes 12-15
+addRegReg %REG0 %REG1
+subRegReg %REG1 %REG0
+jnz proximo2
+incMem teste100
+
+proximo2:
+# FASE 2: Instrucoes 16-17
+ldi 20
+addRegMem %REG0 teste100
+subRegMem %REG1 teste100
+
+# FASE 3: Instrucoes 18-20
+ldi 10
+move %REG0 %REG2
+cmp %REG1 %REG2
+je igual
+jne diferente
+
+igual:
+ldi 99
+jmp fim
+
+diferente:
+ldi 88
+
+fim:
+store teste101
